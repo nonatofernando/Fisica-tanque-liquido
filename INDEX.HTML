@@ -38,7 +38,7 @@ const ctx = c.getContext("2d");
 c.width = 200;
 c.height = 350;
 
-let nivel = 0.6;
+let nivel = 0.9;
 
 let pontos = Array.from({length: 30}, () => ({
   y: c.height * (1 - nivel),
@@ -50,6 +50,7 @@ function loop() {
 
   let base = c.height * (1 - nivel);
 
+  // física da água
   pontos.forEach(p => {
     p.v += (base - p.y) * 0.02;
     p.v *= 0.96;
@@ -63,9 +64,20 @@ function loop() {
     });
   }
 
-  // 💥 CURVA SUAVE AQUI
+  // 🔥 cálculo do nível real (média da onda)
+  let alturaAtual = pontos.reduce((acc, p) => acc + p.y, 0) / pontos.length;
+  let porcentagem = 1 - (alturaAtual / c.height);
+
+  // 🔥 cor dinâmica (0 = vermelho, 120 = verde)
+  let hue = porcentagem * 120;
+  ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+
+  // desenho
   ctx.beginPath();
+
+  // lado esquerdo reto
   ctx.moveTo(0, c.height);
+  ctx.lineTo(0, pontos[0].y);
 
   let prevX = 0;
   let prevY = pontos[0].y;
@@ -83,16 +95,17 @@ function loop() {
     prevY = currY;
   }
 
-  // último ponto
+  // lado direito reto
+  ctx.lineTo(c.width, pontos[pontos.length - 1].y);
   ctx.lineTo(c.width, c.height);
-  ctx.closePath();
 
-  ctx.fillStyle = "#00c853";
+  ctx.closePath();
   ctx.fill();
 
   requestAnimationFrame(loop);
 }
 
+// interação com mouse
 $("#c").on("mousemove", function(e) {
   const rect = c.getBoundingClientRect();
   const x = e.clientX - rect.left;
