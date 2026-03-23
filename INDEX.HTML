@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Tanque Suave</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  .tanque {
+    width: 200px;
+    height: 350px;
+    border: 4px solid #aaa;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #222;
+  }
+</style>
+</head>
+<body>
+
+<div class="tanque">
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+const c = $("#c")[0];
+const ctx = c.getContext("2d");
+
+c.width = 200;
+c.height = 350;
+
+let nivel = 0.6;
+
+let pontos = Array.from({length: 30}, () => ({
+  y: c.height * (1 - nivel),
+  v: 0
+}));
+
+function loop() {
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  let base = c.height * (1 - nivel);
+
+  pontos.forEach(p => {
+    p.v += (base - p.y) * 0.02;
+    p.v *= 0.96;
+    p.y += p.v;
+  });
+
+  for (let k = 0; k < 4; k++) {
+    pontos.forEach((p, i) => {
+      if (pontos[i-1]) pontos[i-1].v += (p.y - pontos[i-1].y) * 0.02;
+      if (pontos[i+1]) pontos[i+1].v += (p.y - pontos[i+1].y) * 0.02;
+    });
+  }
+
+  // 💥 CURVA SUAVE AQUI
+  ctx.beginPath();
+  ctx.moveTo(0, c.height);
+
+  let prevX = 0;
+  let prevY = pontos[0].y;
+
+  for (let i = 1; i < pontos.length; i++) {
+    let currX = (i / (pontos.length - 1)) * c.width;
+    let currY = pontos[i].y;
+
+    let midX = (prevX + currX) / 2;
+    let midY = (prevY + currY) / 2;
+
+    ctx.quadraticCurveTo(prevX, prevY, midX, midY);
+
+    prevX = currX;
+    prevY = currY;
+  }
+
+  // último ponto
+  ctx.lineTo(c.width, c.height);
+  ctx.closePath();
+
+  ctx.fillStyle = "#00c853";
+  ctx.fill();
+
+  requestAnimationFrame(loop);
+}
+
+$("#c").on("mousemove", function(e) {
+  const rect = c.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const i = Math.floor((x / c.width) * pontos.length);
+  const p = pontos[i];
+
+  if (!p) return;
+
+  if (y > p.y) {
+    const profundidade = y - p.y;
+    p.v += Math.min(profundidade * 0.1, 6);
+  }
+});
+
+loop();
+</script>
+
+</body>
+</html>
